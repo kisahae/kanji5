@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Compliance Rule Builder (Condition/Case)</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f6f8fc;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .rule-builder {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .condition {
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      background: #fafafa;
+    }
+
+    .condition-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #e9eef9;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .accordion {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .accordion-header {
+      background: #eef4ff;
+      cursor: pointer;
+      padding: 8px 10px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .accordion-header:hover {
+      background: #dbe4f7;
+    }
+
+    .accordion-content {
+      padding: 10px;
+      display: none;
+      border-top: 1px solid #ccc;
+    }
+
+    .accordion.active .accordion-content {
+      display: block;
+    }
+
+    button {
+      background-color: #0078d7;
+      color: white;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 6px;
+      margin-right: 5px;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    .delete-btn {
+      background-color: #e81123;
+    }
+
+    .delete-btn:hover {
+      background-color: #c50f1f;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #bada55;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    /* Popup Styles */
+    .popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .popup {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .popup h3 {
+      margin-top: 0;
+    }
+
+    .popup button {
+      margin-top: 10px;
+    }
+
+    .value-item {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .value-item input {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="rule-builder">
+    <h2>Compliance Rule Builder</h2>
+
+    <label><strong>Signature Name:</strong></label>
+    <input type="text" id="signatureName" placeholder="Enter signature name..." />
+
+    <label><strong>Keywords:</strong></label>
+    <input type="text" id="keywords" placeholder="Enter keyword(s), separated by commas..." />
+
+    <div id="conditionList"></div>
+
+    <button onclick="addCondition()">➕ Add Condition</button>
+    <button onclick="openApplyPopup()">📋 Apply To</button>
+    <button onclick="openVariablePopup()">🔧 Variable</button>
+    <button onclick="generateRule()">🧩 Generate Rule JSON</button>
+
+    <h3>Generated Rule:</h3>
+    <pre id="output"></pre>
+  </div>
+
+  <!-- Apply To Popup -->
+  <div id="applyPopup" class="popup-overlay" style="display:none;">
+    <div class="popup">
+      <h3>Apply To Configuration</h3>
+      <label>Tenant:</label>
+      <input type="text" id="tenantInput">
+      <label>Site:</label>
+      <input type="text" id="siteInput">
+      <label>Region:</label>
+      <input type="text" id="regionInput">
+      <label>Platform:</label>
+      <input type="text" id="platformInput">
+      <label>Exclude Device:</label>
+      <input type="text" id="excludeInput">
+      <button onclick="closeApplyPopup()">Close</button>
+    </div>
+  </div>
+
+  <!-- Variable Popup -->
+  <div id="variablePopup" class="popup-overlay" style="display:none;">
+    <div class="popup">
+      <h3>Variable Settings</h3>
+      <div id="variableList"></div>
+      <button onclick="addVariable()">➕ Add Variable</button>
+      <button onclick="closeVariablePopup()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // === CONDITION HANDLING ===
+    function addCondition() {
+      const condId = `condition_${Date.now()}`;
+      const div = document.createElement("div");
+      div.className = "condition";
+      div.id = condId;
+
+      div.innerHTML = `
+        <div class="condition-header">
+          <span class="condition-label"></span>
+          <button class="delete-btn" onclick="deleteCondition('${condId}')">🗑️ Delete</button>
+        </div>
+        <div id="caseList_${condId}"></div>
+        <button onclick="addCase('${condId}')">➕ Add Case</button>
+      `;
+
+      document.getElementById("conditionList").appendChild(div);
+      renumberConditions();
+    }
+
+    function deleteCondition(condId) {
+      document.getElementById(condId)?.remove();
+      renumberConditions();
+    }
+
+    function addCase(condId) {
+      const caseId = `case_${Date.now()}`;
+      const acc = document.createElement("div");
+      acc.className = "accordion";
+      acc.id = caseId;
+
+      acc.innerHTML = `
+        <div class="accordion-header" onclick="toggleAccordion('${caseId}')">
+          <span class="case-label"></span>
+          <button class="delete-btn" onclick="event.stopPropagation(); deleteCase('${caseId}', '${condId}')">❌</button>
+        </div>
+        <div class="accordion-content">
+          <label>Parent Config:</label>
+          <input type="text" id="parent_${caseId}" placeholder="Enter parent config...">
+
+          <label>Pattern (one per line):</label>
+          <textarea id="pattern_${caseId}" placeholder="Enter each pattern on a new line..."></textarea>
+
+          <label>Allow Extra Config?</label>
+          <select id="extra_${caseId}">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      `;
+
+      document.getElementById(`caseList_${condId}`).appendChild(acc);
+      renumberCases(condId);
+    }
+
+    function deleteCase(caseId, condId) {
+      document.getElementById(caseId)?.remove();
+      renumberCases(condId);
+    }
+
+    function toggleAccordion(id) {
+      document.getElementById(id).classList.toggle("active");
+    }
+
+    // === RENUMBERING ===
+    function renumberConditions() {
+      const conditions = document.querySelectorAll(".condition");
+      conditions.forEach((condEl, i) => {
+        condEl.querySelector(".condition-label").textContent = `Condition ${i + 1}`;
+        renumberCases(condEl.id);
+      });
+    }
+
+    function renumberCases(condId) {
+      const cases = document.querySelectorAll(`#${condId} .accordion`);
+      cases.forEach((caseEl, i) => {
+        caseEl.querySelector(".case-label").textContent = `Case ${i + 1}`;
+      });
+    }
+
+    // === POPUPS ===
+    function openApplyPopup() {
+      document.getElementById("applyPopup").style.display = "flex";
+    }
+
+    function closeApplyPopup() {
+      document.getElementById("applyPopup").style.display = "none";
+    }
+
+    function openVariablePopup() {
+      document.getElementById("variablePopup").style.display = "flex";
+    }
+
+    function closeVariablePopup() {
+      document.getElementById("variablePopup").style.display = "none";
+    }
+
+    // === VARIABLES HANDLING ===
+    function addVariable() {
+      const varId = `var_${Date.now()}`;
+      const div = document.createElement("div");
+      div.className = "variable-item";
+      div.innerHTML = `
+        <hr>
+        <label>Variable Name:</label>
+        <input type="text" id="var_name_${varId}" placeholder="Variable name">
+        <div id="valueList_${varId}"></div>
+        <button onclick="addValue('${varId}')">➕ Add Value</button>
+        <button class="delete-btn" onclick="this.parentElement.remove()">🗑️ Delete Variable</button>
+      `;
+      document.getElementById("variableList").appendChild(div);
+    }
+
+    function addValue(varId) {
+      const valId = `val_${Date.now()}`;
+      const div = document.createElement("div");
+      div.className = "value-item";
+      div.innerHTML = `
+        <input type="text" id="${valId}" placeholder="Value...">
+        <button class="delete-btn" onclick="this.parentElement.remove()">✖</button>
+      `;
+      document.getElementById(`valueList_${varId}`).appendChild(div);
+    }
+
+    // === GENERATE RULE JSON ===
+    function generateRule() {
+      const signatureName = document.getElementById("signatureName").value;
+      const keywords = document.getElementById("keywords").value.split(',').map(k => k.trim()).filter(k => k);
+      const tenant = document.getElementById("tenantInput").value;
+      const site = document.getElementById("siteInput").value;
+      const region = document.getElementById("regionInput").value;
+      const platform = document.getElementById("platformInput").value;
+      const exclude = document.getElementById("excludeInput").value;
+
+      const applyTo = {
+        tenant,
+        site,
+        region,
+        platform,
+        exclude
+      };
+
+      const variables = [];
+      document.querySelectorAll("#variableList .variable-item").forEach(varEl => {
+        const name = varEl.querySelector("input").value;
+        const values = Array.from(varEl.querySelectorAll(".value-item input")).map(v => v.value);
+        variables.push({
+          name,
+          values
+        });
+      });
+
+      const conditions = [];
+      const condElements = document.querySelectorAll(".condition");
+
+      condElements.forEach((condEl, index) => {
+        const cond = {
+          name: `Condition ${index + 1}`,
+          cases: []
+        };
+        const caseEls = condEl.querySelectorAll(".accordion");
+        caseEls.forEach((caseEl, i) => {
+          const id = caseEl.id;
+          const patternLines = document.getElementById(`pattern_${id}`).value
+            .split("\n").map(line => line.trim()).filter(line => line.length > 0);
+
+          cond.cases.push({
+            name: `Case ${i + 1}`,
+            parent_config: document.getElementById(`parent_${id}`).value,
+            patterns: patternLines,
+            allow_extra: document.getElementById(`extra_${id}`).value === "true"
+          });
+        });
+        conditions.push(cond);
+      });
+
+      document.getElementById("output").textContent = JSON.stringify({
+        signature_name: signatureName,
+        keywords: keywords,
+        apply_to: applyTo,
+        variables: variables,
+        conditions: conditions
+      }, null, 2);
+    }
+  </script>
+</body>
+
+</html>

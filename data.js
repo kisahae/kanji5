@@ -380,10 +380,6 @@ export let kanji = [
     answer: "定食"
   },
   {
-    hint: "Set menu",
-    answer: "定食"
-  },
-  {
     hint: "Fishing",
     answer: "釣り"
   },

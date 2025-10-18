@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Compliance Rule Builder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 20px;
+    }
+
+    .rule-form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      font-weight: bold;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .condition {
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .child {
+      background: #e7f5ff;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      background: #007bff;
+      color: #fff;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+      display: inline-block;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+  </style>
+  <script>
+    function addCondition(type) {
+      let container = document.getElementById('conditions');
+      let div = document.createElement('div');
+      div.className = 'condition';
+
+      if (type === 'simple') {
+        div.innerHTML = `
+          <h4>Simple Condition</h4>
+          <label>Scope (When)</label>
+          <select>
+            <option>All devices (default)</option>
+            <option>Device Type</option>
+            <option>Tenant</option>
+            <option>Hostname</option>
+          </select>
+          <label>Operator</label>
+          <select>
+            <option>==</option>
+            <option>in</option>
+            <option>~ (regex)</option>
+          </select>
+          <label>Value</label>
+          <input type="text" placeholder="contoh: ios-xe, TenantA, ^DC1-.*$">
+          <label>Requirement Type</label>
+          <select>
+            <option>Must Present</option>
+            <option>Must Not Present</option>
+          </select>
+          <label>Command / Regex</label>
+          <textarea placeholder="contoh: no ip http server"></textarea>
+        `;
+      } else if (type === 'parent') {
+        div.innerHTML = `
+          <h4>Parent-Child Condition</h4>
+          <label>Scope (When)</label>
+          <select>
+            <option>All devices (default)</option>
+            <option>Device Type</option>
+            <option>Tenant</option>
+            <option>Hostname</option>
+          </select>
+          <label>Operator</label>
+          <select>
+            <option>==</option>
+            <option>in</option>
+            <option>~ (regex)</option>
+          </select>
+          <label>Value</label>
+          <input type="text" placeholder="contoh: ios-xe, TenantA, ^DC1-.*$">
+          <label>Parent Regex</label>
+          <input type="text" placeholder="contoh: ^interface GigabitEthernet[0-9/]+">
+          <div class="child">
+            <label>Child Must Present</label>
+            <textarea placeholder="contoh: ^ ip address "></textarea>
+            <label>Child Must Not Present</label>
+            <textarea placeholder="contoh: ^ shutdown"></textarea>
+          </div>
+        `;
+      }
+
+      container.appendChild(div);
+    }
+  </script>
+</head>
+
+<body>
+
+  <div class="rule-form">
+    <h2>Buat Rule Baru</h2>
+
+    <label>Rule ID</label>
+    <input type="text" placeholder="contoh: disable_http">
+
+    <label>Description</label>
+    <textarea placeholder="deskripsi rule..."></textarea>
+
+    <h3>Conditions</h3>
+    <div id="conditions"></div>
+
+    <button class="btn" onclick="addCondition('simple')">+ Tambah Simple Condition</button>
+    <button class="btn" onclick="addCondition('parent')">+ Tambah Parent-Child Condition</button>
+
+    <br><br>
+    <button class="btn">Simpan Rule</button>
+  </div>
+
+</body>
+
+</html>
